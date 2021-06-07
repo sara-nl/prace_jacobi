@@ -68,7 +68,7 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
     int iter = 0;                   // Iteration counter
     int max_iter = 10000;           // Maximum number of iterations
     double tolerance = 1e-6;        // Stopping criteria
-    double omega = 0.72;            // Under-relaxation factor
+    double omega = 2./3.;            // Under-relaxation factor
     double residual_norm = 0.0;     // Normalized residual
     Vector x_old;                   // Old solution
     Vector res;                     // Residual vector
@@ -106,11 +106,11 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
                 else
                     diag = A(i, j);
             }
-            x(i) = (x(i) - sigma) / diag;
+            x(i) = (x(i) - sigma) * omega / diag;
         }
 
         for(int i = 0; i < x.numRows(); ++i) {
-            x(i) = x_old(i) + omega * (x(i) - x_old(i));
+            x(i) += (1 - omega) * x_old(i);
             x_old(i) = x(i);
         }
 
