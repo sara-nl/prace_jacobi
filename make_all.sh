@@ -45,7 +45,7 @@ fi
 
 $compiler \
     "${extra_flags[@]}" \
-    -g3 -O3 --std=c++11 \
+    -g3 -O2 --std=c++11 \
     IO/io.cpp \
     General/helpers.cpp \
     Solver/solver.cpp \
