@@ -36,7 +36,9 @@ void findGlobalMin(double &value) {
      * Hint:
      *  - use MPI_IN_PLACE to "replace" the value
      */
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_DOUBLE,
+                  MPI_MIN, MPI_COMM_WORLD);
 #endif
 }
 
@@ -47,7 +49,9 @@ void findGlobalMax(double &value) {
      * Hint:
      *  - use MPI_IN_PLACE to "replace" the value
      */
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_DOUBLE,
+                  MPI_MAX, MPI_COMM_WORLD);
 #endif
 }
 
@@ -55,7 +59,8 @@ int getMyRank() {
 
     int my_rank = 0;
 #ifdef USE_MPI
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 #endif
     return my_rank;
 }
@@ -64,7 +69,8 @@ int getNumProcs() {
 
     int num_procs = 1;
 #ifdef USE_MPI
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 #endif
     return num_procs;
 }
@@ -75,7 +81,9 @@ void findGlobalSum(double &value) {
      * Hint:
      *  - use MPI_IN_PLACE to "replace" the value
      */
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_DOUBLE,
+                  MPI_SUM, MPI_COMM_WORLD);
 #endif
 }
 
@@ -85,7 +93,9 @@ void findGlobalSum(int &value) {
      * Hint:
      *  - use MPI_IN_PLACE to "replace" the value
      */
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_INT,
+                  MPI_SUM, MPI_COMM_WORLD);
 #endif
 }
 
