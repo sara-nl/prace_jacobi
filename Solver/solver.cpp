@@ -43,7 +43,7 @@ void Solver::calculateResidual(Matrix &A, Vector &x, Vector &b, Vector &res) {
      *
      * for vector `x` and matrix `A`, the residual `res`
      * is calculated as:
-     *     res(i) = sum( A(i, j) * x(j) )
+     *     res(i) = b(i) - sum( A(i, j) * x(j) )
      */
     NOT_IMPLEMENTED
 }
