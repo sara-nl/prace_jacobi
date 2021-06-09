@@ -48,28 +48,28 @@ void IO::writeFile(std::string file_name, Dimensions &dims, Field &T) {
 
     out.close();
 #else
-    MPI_File mpi_file;
-    int out_case = IO_BY_ROOT;
+    // MPI_File mpi_file;
+    // int out_case = IO_BY_ROOT;
 
-    /*
-     * Be sure you rewrite the file!
-     * Just delete the old one
-     */
-    NOT_IMPLEMENTED
+    // /*
+    //  * Be sure you rewrite the file!
+    //  * Just delete the old one
+    //  */
+    // NOT_IMPLEMENTED
 
-    switch (out_case) {
-        case IO_BY_ROOT: default:
-            // Using MPI_Gatherv() and writing by the root process
-            writeByRoot(mpi_file, dims, T);
-            break;
+    // switch (out_case) {
+    //     case IO_BY_ROOT: default:
+    //         // Using MPI_Gatherv() and writing by the root process
+    //         writeByRoot(mpi_file, dims, T);
+    //         break;
 
-        case IO_BY_COLLECTIVE:
-            // Performing parallel IO
-            writeByAll(mpi_file, dims, T);
-            break;
-    }
+    //     case IO_BY_COLLECTIVE:
+    //         // Performing parallel IO
+    //         writeByAll(mpi_file, dims, T);
+    //         break;
+    // }
 
-    MPI_File_close(&mpi_file);
+    // MPI_File_close(&mpi_file);
 #endif
 }
 

@@ -33,7 +33,11 @@ void Solver::copyVector(Vector &vec_in, Vector &vec_out) {
      * for every n-th elements in `vec_in`
      *     assign element of vec_in(n) to vec_out(n)
      */
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+
+    for(int i = 0; i < vec_in.numRows(); ++i) {
+        vec_out(i) = vec_in(i);
+    }    
 }
 
 void Solver::calculateResidual(Matrix &A, Vector &x, Vector &b, Vector &res) {
@@ -43,9 +47,19 @@ void Solver::calculateResidual(Matrix &A, Vector &x, Vector &b, Vector &res) {
      *
      * for vector `x` and matrix `A`, the residual `res`
      * is calculated as:
-     *     res(i) = sum( A(i, j) * x(j) )
+     *     res(i) = b(i) - sum( A(i, j) * x(j) )
      */
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+
+    copyVector(b, res);
+
+    for(int i = 0; i < A.numRows(); ++i) {
+        double sum = 0.0;
+        for(int j = 0; j < A.numCols(); ++j) {
+            sum += A(i, j) * x(j);
+        }
+        res(i) -= sum;
+    }
 }
 
 double Solver::calculateNorm(Vector &vec) {
@@ -58,9 +72,17 @@ double Solver::calculateNorm(Vector &vec) {
      *              \__________________________/
      *            one value for all MPI processes
      */
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    
+    double sum = 0.0;
 
-    return 0.0;
+    for(int i = 0; i < vec.getLocElts(); ++i) {
+        sum += vec(i) * vec(i);
+    }
+
+    findGlobalSum(sum);
+
+    return sqrt(sum);
 }
 
 void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
@@ -90,10 +112,10 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
      * Place the call for `x.exchangeRealHalo();` at the right place in the
      * iterative loop.
      */
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
 #endif
     while ( (iter < max_iter) && (residual_norm > tolerance) ) {
-
+        
         for(int i = A.numRows() - 1; i >= 0; i--) {
             double diag = 1.;          // Diagonal element
             double sigma = 0.0;        // Just a temporary value
@@ -108,6 +130,8 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
             }
             x(i) = (x(i) - sigma) * omega / diag;
         }
+        
+        x.exchangeRealHalo();
 
         for(int i = 0; i < x.numRows(); ++i) {
             x(i) += (1 - omega) * x_old(i);
