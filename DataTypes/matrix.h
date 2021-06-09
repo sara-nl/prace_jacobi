@@ -96,7 +96,8 @@ public:
     }
 
     /*!
-     * @brief Return number of local rows.
+     * @brief Return number of local rows including rows which represent halo 
+     *        elements, if there are any.
      * @note If this method is called for the object of inherited \e Field class,
      * the method will return the number of elements in i-th direction.
      */
