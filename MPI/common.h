@@ -80,11 +80,6 @@ void initialize(int argc, char** argv);
 void finalize();
 
 /*!
- * @brief Terminate the program.
- */
-void terminateExecution();
-
-/*!
  * @brief Print the message to the terminal.
  * @param str [in] The message.
  */

@@ -25,7 +25,7 @@
 
 #include <iostream>
 #include <stdio.h>
-#include "../MPI/common.h"
+#include "termination.h"
 
 #define EMPTY -1            // Keep it negative!
 #define PHYS_BOUNDARY 1

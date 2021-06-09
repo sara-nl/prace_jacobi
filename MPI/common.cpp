@@ -27,18 +27,27 @@
 
 #include <iostream>
 #include "common.h"
+#include "../General/macro.h"
 
 void findGlobalMin(double &value) {
 
 #ifdef USE_MPI
-    MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    /*
+     * Hint:
+     *  - use MPI_IN_PLACE to "replace" the value
+     */
+    NOT_IMPLEMENTED
 #endif
 }
 
 void findGlobalMax(double &value) {
 
 #ifdef USE_MPI
-    MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    /*
+     * Hint:
+     *  - use MPI_IN_PLACE to "replace" the value
+     */
+    NOT_IMPLEMENTED
 #endif
 }
 
@@ -46,7 +55,7 @@ int getMyRank() {
 
     int my_rank = 0;
 #ifdef USE_MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    NOT_IMPLEMENTED
 #endif
     return my_rank;
 }
@@ -55,20 +64,28 @@ int getNumProcs() {
 
     int num_procs = 1;
 #ifdef USE_MPI
-    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    NOT_IMPLEMENTED
 #endif
     return num_procs;
 }
 
 void findGlobalSum(double &value) {
 #ifdef USE_MPI
-    MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    /*
+     * Hint:
+     *  - use MPI_IN_PLACE to "replace" the value
+     */
+    NOT_IMPLEMENTED
 #endif
 }
 
 void findGlobalSum(int &value) {
 #ifdef USE_MPI
-    MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    /*
+     * Hint:
+     *  - use MPI_IN_PLACE to "replace" the value
+     */
+    NOT_IMPLEMENTED
 #endif
 }
 
@@ -81,14 +98,6 @@ void initialize(int argc, char** argv) {
 void finalize() {
 #ifdef USE_MPI
     MPI_Finalize();
-#endif
-}
-
-void terminateExecution() {
-#ifdef USE_MPI
-    MPI_Abort(MPI_COMM_WORLD, 1);
-#else
-    exit(1);
 #endif
 }
 
