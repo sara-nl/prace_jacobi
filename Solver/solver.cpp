@@ -34,7 +34,7 @@ void Solver::copyVector(Vector &vec_in, Vector &vec_out) {
      *     assign element of vec_in(n) to vec_out(n)
      */
     // NOT_IMPLEMENTED
-
+#pragma omp parallel for simd
     for(int i = 0; i < vec_in.numRows(); ++i) {
         vec_out(i) = vec_in(i);
     }    
@@ -53,8 +53,10 @@ void Solver::calculateResidual(Matrix &A, Vector &x, Vector &b, Vector &res) {
 
     copyVector(b, res);
 
+#pragma omp parallel for
     for(int i = 0; i < A.numRows(); ++i) {
         double sum = 0.0;
+#pragma omp simd reduction(+:sum)
         for(int j = 0; j < A.numCols(); ++j) {
             sum += A(i, j) * x(j);
         }
@@ -76,6 +78,7 @@ double Solver::calculateNorm(Vector &vec) {
     
     double sum = 0.0;
 
+#pragma omp parallel for simd reduction(+ : sum)
     for(int i = 0; i < vec.getLocElts(); ++i) {
         sum += vec(i) * vec(i);
     }
@@ -117,23 +120,25 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
 #endif
     while ( (iter < max_iter) && (residual_norm > tolerance) ) {
         
+#pragma omp parallel for
         for(int i = A.numRows() - 1; i >= 0; i--) {
             double diag = 1.;          // Diagonal element
             double sigma = 0.0;        // Just a temporary value
 
             x(i) = b(i);
 
+#pragma omp simd reduction(+ : sigma)
             for(int j = 0; j < A.numCols(); ++j) {
-                if (j != i)
-                    sigma = sigma + A(i, j) * x_old(j);
-                else
-                    diag = A(i, j);
+                sigma += A(i, j) * x_old(j);
             }
+            diag = A(i, i);
+            sigma -= diag * x_old(i);
             x(i) = (x(i) - sigma) * omega / diag;
         }
         
         x.exchangeRealHalo();
-
+        
+#pragma omp parallel for simd 
         for(int i = 0; i < x.numRows(); ++i) {
             x(i) += (1 - omega) * x_old(i);
             x_old(i) = x(i);
