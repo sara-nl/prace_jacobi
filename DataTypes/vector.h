@@ -110,6 +110,7 @@ private:
                             int &_chunk_size, int &_chunk_start_index);
 
 
+#ifdef USE_MPI
     void sendAndReceive(vector<double> &snd_buf, vector<double> &rcv_buf, 
                         int pid, int tag, MPI_Request *request);
 
@@ -126,7 +127,7 @@ private:
     void waitForAll(Neighbors &ngb_pid,
                     MPI_Request *request_w, MPI_Request *request_e,
                     MPI_Request *request_s, MPI_Request *request_n);
-
+#endif
 };
 
 #endif

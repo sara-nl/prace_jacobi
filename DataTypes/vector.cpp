@@ -107,6 +107,7 @@ void Vector::resize(Dimensions const &in_dims) {
     }
 }
 
+#ifdef USE_MPI
 void Vector::sendAndReceive(vector<double> &snd_buf, vector<double> &rcv_buf, 
                     int ngb_pid, int tag, MPI_Request *request) {
 
@@ -158,6 +159,7 @@ void Vector::waitForAll(Neighbors &ngb_pid,
         MPI_Waitall(2, request_n, snd_status);
     }
 }
+#endif
 
 //
 // Using MPI_Isend() and MPI_Irecv()
