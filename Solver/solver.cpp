@@ -95,7 +95,8 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
     Vector x_old;                   // Old solution
     Vector res;                     // Residual vector
     int my_rank = 0;                // Process rank (0 in non-MPI case)
-
+    double norm_b = calculateNorm(b);
+    
     my_rank = getMyRank();
 
     x_old.resize(x.getDimensions());
@@ -139,7 +140,7 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
         }
 
         calculateResidual(A, x, b, res);
-        residual_norm = calculateNorm(res) / calculateNorm(b);
+        residual_norm = calculateNorm(res) / norm_b;
 
         if (my_rank == 0)
             cout << iter << '\t' << residual_norm << endl;
