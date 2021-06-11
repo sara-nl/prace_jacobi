@@ -108,6 +108,25 @@ private:
      */
     void associateChunkData(const int num_elts, int &_halo_start_index,
                             int &_chunk_size, int &_chunk_start_index);
+
+
+    void sendAndReceive(vector<double> &snd_buf, vector<double> &rcv_buf, 
+                        int pid, int tag, MPI_Request *request);
+
+    void packSndBuffer(vector<double> &snd_buf, std::vector<int> &on_boarder_ids, 
+                    int halo_chunk_size);
+
+    void unpackRcvBuffer(vector<double> &rcv_buf, int halo_chunk_start_index, 
+                        int halo_chunk_size, int ngb_pid);
+
+    void communicateToNgb(vector<double> &snd_buf, vector<double> &rcv_buf,
+                        vector<int> &on_boarder_ids, int halo_chunk_size,
+                        int ngb_pid, int tag, MPI_Request *request);
+
+    void waitForAll(Neighbors &ngb_pid,
+                    MPI_Request *request_w, MPI_Request *request_e,
+                    MPI_Request *request_s, MPI_Request *request_n);
+
 };
 
 #endif
