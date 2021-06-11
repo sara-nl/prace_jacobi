@@ -48,28 +48,33 @@ void IO::writeFile(std::string file_name, Dimensions &dims, Field &T) {
 
     out.close();
 #else
-    // MPI_File mpi_file;
-    // int out_case = IO_BY_ROOT;
+    MPI_File mpi_file;
+    int out_case = IO_BY_COLLECTIVE;
 
-    // /*
-    //  * Be sure you rewrite the file!
-    //  * Just delete the old one
-    //  */
+    /*
+     * Be sure you rewrite the file!
+     * Just delete the old one
+     */
     // NOT_IMPLEMENTED
+    MPI_File_open(MPI_COMM_WORLD, file_name.c_str(), MPI_MODE_CREATE | MPI_MODE_DELETE_ON_CLOSE | 
+                  MPI_MODE_WRONLY, MPI_INFO_NULL, &mpi_file);
+    MPI_File_close(&mpi_file);
+    MPI_File_open(MPI_COMM_WORLD, file_name.c_str(), MPI_MODE_CREATE | 
+                  MPI_MODE_WRONLY, MPI_INFO_NULL, &mpi_file);
 
-    // switch (out_case) {
-    //     case IO_BY_ROOT: default:
-    //         // Using MPI_Gatherv() and writing by the root process
-    //         writeByRoot(mpi_file, dims, T);
-    //         break;
+    switch (out_case) {
+        case IO_BY_ROOT: default:
+            // Using MPI_Gatherv() and writing by the root process
+            writeByRoot(mpi_file, dims, T);
+            break;
 
-    //     case IO_BY_COLLECTIVE:
-    //         // Performing parallel IO
-    //         writeByAll(mpi_file, dims, T);
-    //         break;
-    // }
+        case IO_BY_COLLECTIVE:
+            // Performing parallel IO
+            writeByAll(mpi_file, dims, T);
+            break;
+    }
 
-    // MPI_File_close(&mpi_file);
+    MPI_File_close(&mpi_file);
 #endif
 }
 
@@ -125,7 +130,8 @@ void IO::writeByRoot(MPI_File &mpi_file, Dimensions &dims, Field &T) {
     // Gather the number of elements from each process
     // According to the standard: "The root process receives the messages and stores them in rank order."
     local_size = T.size();
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    MPI_Gather(&local_size, 1, MPI_INT, all_sizes.data(), 1, MPI_INT, root_pid, MPI_COMM_WORLD);
 
     // Calculate the displacement
     for(int i = 0; i < all_sizes.size(); ++i) {
@@ -134,14 +140,33 @@ void IO::writeByRoot(MPI_File &mpi_file, Dimensions &dims, Field &T) {
         }
     }
 
+    // x0 y0 T0
+    // x1 y1 T1
+    // x2 y2 T2
+    // x3 y3 T3
+    // ...
+    // xN yN TN
+    // 
+    // Lustre:
+    // ...
+    // echo $TMPDIR
+    // mkrid $TMPDIR/mpi_io
+    // cp a.out $TMPDIR/mpi_io
+    // cd $TMPDIR/mpi_io
+    // srun ./a.out -s 64 64 -d 4 4  # for 16 MPI tasks
+    // cp output.dat $HOME/prace_jacobi
+
     // Gather the data from the distributed field
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    MPI_Gatherv(T_1D.data(), T_1D.size(), MPI_DOUBLE, buffer_T_rcv.data(),
+                all_sizes.data(), displacement.data(), MPI_DOUBLE, root_pid, MPI_COMM_WORLD);
     /* ******************************************************** */
 
     // Do the same for the grid. Note, that we have two coordinates
     /* ******************************************************** */
     local_size = 2 * T.size();
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    MPI_Gather(&local_size, 1, MPI_INT, all_sizes.data(), 1, MPI_INT, root_pid, MPI_COMM_WORLD);
 
     // Calculate the displacement
     for(int i = 0; i < displacement.size(); ++i) {
@@ -154,7 +179,9 @@ void IO::writeByRoot(MPI_File &mpi_file, Dimensions &dims, Field &T) {
     }
 
     // Gather the data from the distributed field
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    MPI_Gatherv(grid_1D.data(), grid_1D.size(), MPI_DOUBLE, buffer_grid_rcv.data(),
+                all_sizes.data(), displacement.data(), MPI_DOUBLE, root_pid, MPI_COMM_WORLD);
     /* ******************************************************** */
 
     // Write the gathered data by the root process
@@ -172,7 +199,8 @@ void IO::writeByRoot(MPI_File &mpi_file, Dimensions &dims, Field &T) {
             }
         }
         // Write to the file
-        NOT_IMPLEMENTED
+        // NOT_IMPLEMENTED
+        MPI_File_write(mpi_file, buffer_wrt.data(), buffer_wrt.size(), MPI_DOUBLE, &status);
     }
 }
 
@@ -211,8 +239,8 @@ void IO::writeByAll(MPI_File &mpi_file, Dimensions &dims, Field &T) {
     displacements[0] = MPI_Aint_diff(displacements[0], base_address);
     displacements[1] = MPI_Aint_diff(displacements[1], base_address);
 
-    /* Create a new type of structure and commit it */
-    NOT_IMPLEMENTED
+    // /* Create a new type of structure and commit it */
+    // NOT_IMPLEMENTED
 
     /* Prepare subarray type */
     int glob_sizes[2] = {T.getDimensions().getNumEltsGlob().i, T.getDimensions().getNumEltsGlob().j};
@@ -220,15 +248,22 @@ void IO::writeByAll(MPI_File &mpi_file, Dimensions &dims, Field &T) {
     int start_inds[2] = {T.getDimensions().getBegIndicesGlob().i, T.getDimensions().getBegIndicesGlob().j};
     MPI_Datatype subarray_type;
 
-    /* Based on the created type of structure, create a subarray and commit it */
-    NOT_IMPLEMENTED
+    MPI_Type_create_subarray(2, glob_sizes, loc_sizes, start_inds, MPI_ORDER_C, MPI_DOUBLE, &subarray_type);
+    MPI_Type_commit(&subarray_type);
 
-    /* Set vile view and write data */
     MPI_Status status;
-    /* Set the file view using the created types of structure and subarray */
-    NOT_IMPLEMENTED
+    MPI_File_set_view(mpi_file, 0, MPI_DOUBLE, subarray_type, "native", MPI_INFO_NULL);
+    MPI_File_write_all(mpi_file, T.getData(), T.getLocElts(), MPI_DOUBLE, &status);
 
-    /* Write to the file using "regular" and collective write */
-    NOT_IMPLEMENTED
+    // /* Based on the created type of structure, create a subarray and commit it */
+    // NOT_IMPLEMENTED
+
+    // /* Set vile view and write data */
+    // MPI_Status status;
+    // /* Set the file view using the created types of structure and subarray */
+    // NOT_IMPLEMENTED
+
+    // /* Write to the file using "regular" and collective write */
+    // NOT_IMPLEMENTED
 }
 #endif

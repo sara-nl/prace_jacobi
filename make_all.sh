@@ -16,7 +16,7 @@ then
 elif [ $1 = "omp" ]
 then
     echo "Compiling with 'g++'..."
-    extra_flags=(-fopenmp)
+    extra_flags=(-fopenmp -fopenmp-simd -fopt-info-vec-optimized -march=native)
 elif [ $1 = "hybrid" ]
 then
     echo "Compiling in a hybrid mode with 'mpicxx'..."
