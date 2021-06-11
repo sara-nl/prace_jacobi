@@ -107,6 +107,61 @@ void Vector::resize(Dimensions const &in_dims) {
     }
 }
 
+void Vector::sendAndReceive(vector<double> &snd_buf, vector<double> &rcv_buf, 
+                    int ngb_pid, int tag, MPI_Request *request) {
+
+    MPI_Isend(snd_buf.data(), snd_buf.size(), MPI_DOUBLE, ngb_pid, tag, MPI_COMM_WORLD, &request[0]);
+    MPI_Irecv(rcv_buf.data(), rcv_buf.size(), MPI_DOUBLE, ngb_pid, tag, MPI_COMM_WORLD, &request[1]);
+}
+
+void Vector::packSndBuffer(vector<double> &snd_buf, std::vector<int> &on_boarder_ids, int halo_chunk_size) {
+    
+    for(int n = 0; n < halo_chunk_size; ++n) {
+        snd_buf[n] = data[on_boarder_ids[n]];
+    }
+}
+
+void Vector::unpackRcvBuffer(vector<double> &rcv_buf, int halo_chunk_start_index, 
+                             int halo_chunk_size, int ngb_pid) {
+    
+    if (ngb_pid != EMPTY) {
+        for(int n = 0; n < halo_chunk_size; ++n) {
+            data[halo_chunk_start_index + n] = rcv_buf[n];
+        }
+    }
+}
+
+void Vector::communicateToNgb(vector<double> &snd_buf, vector<double> &rcv_buf,
+                              vector<int> &on_boarder_ids, int halo_chunk_size,
+                              int ngb_pid, int tag, MPI_Request *request) {
+    if (ngb_pid != EMPTY) {
+        packSndBuffer(snd_buf, on_boarder_ids, halo_chunk_size);
+        sendAndReceive(snd_buf, rcv_buf, ngb_pid, tag, request);
+    }
+}
+
+void Vector::waitForAll(Neighbors &ngb_pid, 
+                MPI_Request *request_w, MPI_Request *request_e,
+                MPI_Request *request_s, MPI_Request *request_n) {
+    
+    MPI_Status snd_status[2];
+    if (ngb_pid.west != EMPTY) {
+        MPI_Waitall(2, request_w, snd_status);
+    }
+    if (ngb_pid.east != EMPTY) {
+        MPI_Waitall(2, request_e, snd_status);
+    }
+    if (ngb_pid.south != EMPTY) {
+        MPI_Waitall(2, request_s, snd_status);
+    }
+    if (ngb_pid.north != EMPTY) {
+        MPI_Waitall(2, request_n, snd_status);
+    }
+}
+
+//
+// Using MPI_Isend() and MPI_Irecv()
+//
 void Vector::exchangeRealHalo() {
 
 #ifndef USE_MPI
@@ -116,93 +171,49 @@ void Vector::exchangeRealHalo() {
 
     int my_rank = getMyRank();
     int num_procs = getNumProcs();
-    vector<double> snd_buf_we, rcv_buf_we;                      // Send/receive buffers for the west/east Neighbors
-    vector<double> snd_buf_sn, rcv_buf_sn;                      // Send/receive buffers for the south/north Neighbors
+    vector<double> snd_buf_w, rcv_buf_w;                      // Send/receive buffers for the west neighbors
+    vector<double> snd_buf_e, rcv_buf_e;                      // Send/receive buffers for the east neighbors
+    vector<double> snd_buf_s, rcv_buf_s;                      // Send/receive buffers for the south neighbors
+    vector<double> snd_buf_n, rcv_buf_n;                      // Send/receive buffers for the north neighbors
+
     Neighbors ngb_pid = dims.getDecomposition().getNgbPid();
     int imax_loc = dims.getNumEltsLoc().i;
     int jmax_loc = dims.getNumEltsLoc().j;
     MPI_Status status;
     int tag_we = 1;
     int tag_sn = 2;
+    int num_ngb = 4;
+    MPI_Request request_w[2], request_e[2], request_s[2], request_n[2];
 
     // Pre-allocate buffers
-    snd_buf_we.resize(jmax_loc);
-    rcv_buf_we.resize(jmax_loc);
+    snd_buf_w.resize(jmax_loc);
+    snd_buf_e.resize(jmax_loc);
+    rcv_buf_w.resize(jmax_loc);
+    rcv_buf_e.resize(jmax_loc);
 
-    snd_buf_sn.resize(imax_loc);
-    rcv_buf_sn.resize(imax_loc);
+    snd_buf_s.resize(imax_loc);
+    snd_buf_n.resize(imax_loc);
+    rcv_buf_s.resize(imax_loc);
+    rcv_buf_n.resize(imax_loc);
 
-    /* ****************************************************************************************** */
-    // Assemble send buffers to west
-    if (ngb_pid.west != EMPTY) {
-            for(int n = 0; n < halo_chunk_size.west; ++n) {
-                snd_buf_we[n] = data[on_boarder_ids.west[n]];
-            }
-            MPI_Send(snd_buf_we.data(), snd_buf_we.size(), MPI_DOUBLE, ngb_pid.west, tag_we, MPI_COMM_WORLD);
-    }
+    // Communicate with the neighbors on all sides
+    communicateToNgb(snd_buf_w, rcv_buf_w, on_boarder_ids.west, halo_chunk_size.west, 
+                     ngb_pid.west, tag_we, request_w);
+    communicateToNgb(snd_buf_e, rcv_buf_e, on_boarder_ids.east, halo_chunk_size.east,
+                     ngb_pid.east, tag_we, request_e);
+    communicateToNgb(snd_buf_s, rcv_buf_s, on_boarder_ids.south, halo_chunk_size.south,
+                     ngb_pid.south, tag_sn, request_s);
+    communicateToNgb(snd_buf_n, rcv_buf_n, on_boarder_ids.north, halo_chunk_size.north,
+                     ngb_pid.north, tag_sn, request_n);
 
-    // Assemble send buffers to south
-    if (ngb_pid.south != EMPTY) {
-        for(int n = 0; n < halo_chunk_size.south; ++n) {
-            snd_buf_sn[n] = data[on_boarder_ids.south[n]];
-        }
-        MPI_Send(snd_buf_sn.data(), snd_buf_sn.size(), MPI_DOUBLE, ngb_pid.south, tag_sn, MPI_COMM_WORLD);
-    }
+    // Wait for all communications to finish
+    waitForAll(ngb_pid, request_w, request_e, request_s, request_n);
+    
+    // Unpack received buffers
+    unpackRcvBuffer(rcv_buf_w, halo_chunk_start_index.west, halo_chunk_size.west, ngb_pid.west);
+    unpackRcvBuffer(rcv_buf_e, halo_chunk_start_index.east, halo_chunk_size.east, ngb_pid.east);
+    unpackRcvBuffer(rcv_buf_s, halo_chunk_start_index.south, halo_chunk_size.south, ngb_pid.south);
+    unpackRcvBuffer(rcv_buf_n, halo_chunk_start_index.north, halo_chunk_size.north, ngb_pid.north);
 
-    // Receive from east
-    if (ngb_pid.east != EMPTY) {
-        MPI_Recv(rcv_buf_we.data(), rcv_buf_we.size(), MPI_DOUBLE, ngb_pid.east, tag_we, MPI_COMM_WORLD, &status);
-        int id = halo_chunk_start_index.east;
-        for(int n = 0; n < halo_chunk_size.east; ++n) {
-            data[id + n] = rcv_buf_we[n];
-        }
-    }
-
-    // Receive from north
-    if (ngb_pid.north != EMPTY) {
-        MPI_Recv(rcv_buf_sn.data(), rcv_buf_sn.size(), MPI_DOUBLE, ngb_pid.north, tag_sn, MPI_COMM_WORLD, &status);
-        int id = halo_chunk_start_index.north;
-        for(int n = 0; n < halo_chunk_size.north; ++n) {
-            data[id + n] = rcv_buf_sn[n];
-        }
-    }
-    /* ****************************************************************************************** */
-    /* ****************************************************************************************** */
-    // Assemble send buffers to east
-    if (ngb_pid.east != EMPTY) {
-            for(int n = 0; n < halo_chunk_size.east; ++n) {
-                snd_buf_we[n] = data[on_boarder_ids.east[n]];
-            }
-            MPI_Send(snd_buf_we.data(), snd_buf_we.size(), MPI_DOUBLE, ngb_pid.east, tag_we, MPI_COMM_WORLD);
-    }
-
-    // Assemble send buffers to north
-    if (ngb_pid.north != EMPTY) {
-        for(int n = 0; n < halo_chunk_size.north; ++n) {
-            snd_buf_sn[n] = data[on_boarder_ids.north[n]];
-        }
-        MPI_Send(snd_buf_sn.data(), snd_buf_sn.size(), MPI_DOUBLE, ngb_pid.north, tag_sn, MPI_COMM_WORLD);
-    }
-
-    // Receive from west
-    if (ngb_pid.west != EMPTY) {
-        MPI_Recv(rcv_buf_we.data(), rcv_buf_we.size(), MPI_DOUBLE, ngb_pid.west, tag_we, MPI_COMM_WORLD, &status);
-        int id = halo_chunk_start_index.west;
-        for(int n = 0; n < halo_chunk_size.west; ++n) {
-            data[id + n] = rcv_buf_we[n];
-        }
-    }
-
-    // Receive from south
-    if (ngb_pid.south != EMPTY) {
-        MPI_Recv(rcv_buf_sn.data(), rcv_buf_sn.size(), MPI_DOUBLE, ngb_pid.south, tag_sn, MPI_COMM_WORLD, &status);
-        int id = halo_chunk_start_index.south;
-        for(int n = 0; n < halo_chunk_size.south; ++n) {
-            data[id + n] = rcv_buf_sn[n];
-        }
-    }
-    /* ****************************************************************************************** */
-
-    MPI_Barrier(MPI_COMM_WORLD);
 #endif
 }
