@@ -83,6 +83,14 @@ private:
      * @param field_1D [in] 2D field
      */
     void convertTo1D(Field &field_2D, vector<double> &field_1D);
+
+    /*!
+     * @brief Garther a field by the root process.
+     * @param root_pid [in] PID of the root process
+     * @param field [in] Field to be gathered
+     * @param rcv_buffer [out] Received buffer that contains the gathered field
+     */
+    void gatherField(int root_pid, vector<double> &field, vector<double> &rcv_buffer);
 #endif
 };
 
