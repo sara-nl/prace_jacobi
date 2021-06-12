@@ -73,13 +73,55 @@ public:
     void copyVector(Vector &vec_in, Vector &vec_out);
 
     /*!
-     * @brief Solve the provided linear system \f[ A x = b \f] using Jacobi solver.
+     * @brief Solve the provided linear system \f[ A x = b \f] using Jacobi solver and MPI/OpenMP.
      * @note Memory for the vectors and matrix should be pre-allocated.
      * @param A [in] Matrix
      * @param x [out] Vector of unknowns
      * @param b [in] Vector of right hand side
      */
     void solveJacobi(Matrix &A, Vector &x, Vector &b);
+
+#ifdef USE_GPU
+    #pragma omp declare target
+    /*!
+     * @brief Calculate the residual \f[ r = b - Ax \f].
+     * @param A [in] Matrix
+     * @param x [in] Vector of unknowns
+     * @param b [in] Vector of right hand side
+     * @param res [out] Vector of residual
+     */
+    void calculateResidual(double *A, double *x, double *b, 
+                           double *res, int num_rows, 
+                           int num_cols);
+    #pragma omp end declare target
+
+    #pragma omp declare target
+    /*!
+     * @brief Calculate the L2-norm.
+     * @param vec [in] Vector
+     * @return Value of L2-norm
+     */
+    double calculateNorm(double *vec, int num_rows);
+    #pragma omp end declare target
+
+    #pragma omp declare target
+    /*!
+     * @brief Copy elements of one vector to another vector (overloaded for GPU).
+     * @param [in] vec_in Vector to be copied from
+     * @param [out] vec_out Vector to be copied to
+     */
+    void copyVector(double *vec_in, double *vec_out, int num_rows);
+    #pragma omp end declare target
+
+    /*!
+     * @brief Solve the provided linear system \f[ A x = b \f] using Jacobi solver and GPU offloading.
+     * @note Memory for the vectors and matrix should be pre-allocated.
+     * @param A [in] Matrix
+     * @param x [out] Vector of unknowns
+     * @param b [in] Vector of right hand side
+     */
+    void solveJacobiGPU(Matrix &A, Vector &x, Vector &b);
+#endif
 };
 
 

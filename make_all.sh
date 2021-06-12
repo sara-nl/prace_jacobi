@@ -25,7 +25,7 @@ then
 elif [ $1 = "gpu" ]
 then
     echo "Compiling with 'g++' and support for the OpenMP offloading..."
-    extra_flags=(-fopenmp -foffload=nvptx-none='-misa=sm_35 -Ofast -lm')
+    extra_flags=(-fopenmp -foffload=nvptx-none='-misa=sm_35 -Ofast -lm' -DUSE_GPU)
 else
     echo "Incorrect compilation type is specified. Please, use 'omp', 'mpi' or 'hybrid' "
     echo "to compile with OpenMP, MPI or hybrid parallelism, respectively."
@@ -49,6 +49,7 @@ $compiler \
     IO/io.cpp \
     General/helpers.cpp \
     Solver/solver.cpp \
+    Solver/solver_gpu.cpp \
     System/system.cpp \
     General/dimensions.cpp \
     main.cpp \

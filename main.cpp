@@ -96,7 +96,11 @@ void runProblem(int argc, char** argv) {
 
     /* Solve the linear system. */
     elp_time[0] = helpers.tic();
+#ifdef USE_GPU
+    solver.solveJacobiGPU(A, x, b);
+#else
     solver.solveJacobi(A, x, b);
+#endif
     elp_time[1] = helpers.toc();
 
     /* Copy final solution back to the filed. */

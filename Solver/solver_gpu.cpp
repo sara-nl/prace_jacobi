@@ -27,20 +27,25 @@
 
 #include "solver.h"
 
-void Solver::copyVector(Vector &vec_in, Vector &vec_out) {
+#ifdef USE_GPU
+#pragma omp declare target
+void Solver::copyVector(double *vec_in, double *vec_out, int num_rows) {
 
     /*
      * for every n-th elements in `vec_in`
      *     assign element of vec_in(n) to vec_out(n)
      */
     // NOT_IMPLEMENTED
-#pragma omp parallel for simd
-    for(int i = 0; i < vec_in.numRows(); ++i) {
-        vec_out(i) = vec_in(i);
+#pragma omp distribute parallel for simd
+    for(int i = 0; i < num_rows; ++i) {
+        vec_out[i] = vec_in[i];
     }    
 }
+#pragma omp end declare target
 
-void Solver::calculateResidual(Matrix &A, Vector &x, Vector &b, Vector &res) {
+#pragma omp declare target
+void Solver::calculateResidual(double *A, double *x, double *b, double *res,
+                               int num_rows, int num_cols) {
 
     /*
      * assign `b` to `res`
@@ -51,20 +56,22 @@ void Solver::calculateResidual(Matrix &A, Vector &x, Vector &b, Vector &res) {
      */
     // NOT_IMPLEMENTED
 
-    copyVector(b, res);
+    copyVector(b, res, num_rows);
 
-#pragma omp parallel for
-    for(int i = 0; i < A.numRows(); ++i) {
+#pragma omp distribute parallel for
+    for(int i = 0; i < num_rows; ++i) {
         double sum = 0.0;
 #pragma omp simd reduction(+:sum)
-        for(int j = 0; j < A.numCols(); ++j) {
-            sum += A(i, j) * x(j);
+        for(int j = 0; j < num_cols; ++j) {
+            sum += A[j + i * num_cols] * x[j];
         }
-        res(i) -= sum;
+        res[i] -= sum;
     }
 }
+#pragma omp end declare target
 
-double Solver::calculateNorm(Vector &vec) {
+#pragma omp declare target
+double Solver::calculateNorm(double *vec, int num_loc_elts) {
 
     /*
      * for vector `vec` with n elements
@@ -79,36 +86,48 @@ double Solver::calculateNorm(Vector &vec) {
     double sum = 0.0;
 
 #pragma omp parallel for simd reduction(+ : sum)
-    for(int i = 0; i < vec.getLocElts(); ++i) {
-        sum += vec(i) * vec(i);
+    for(int i = 0; i < num_loc_elts; ++i) {
+        sum += vec[i] * vec[i];
     }
 
-    findGlobalSum(sum);
+    // findGlobalSum(sum);
 
     return sqrt(sum);
 }
+#pragma omp end declare target
 
-void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
+void Solver::solveJacobiGPU(Matrix &A_obj, Vector &x_obj, Vector &b_obj) {
 
     int iter = 0;                   // Iteration counter
     int max_iter = 10000;           // Maximum number of iterations
     double tolerance = 1e-6;        // Stopping criteria
     double omega = 2./3.;            // Under-relaxation factor
     double residual_norm = 0.0;     // Normalized residual
-    Vector x_old;                   // Old solution
-    Vector res;                     // Residual vector
+    Vector x_old_obj;                   // Old solution
+    Vector res_obj;                     // Residual vector
     int my_rank = 0;                // Process rank (0 in non-MPI case)
-    double norm_b = calculateNorm(b);
+    double norm_b;
     
     my_rank = getMyRank();
 
-    x_old.resize(x.getDimensions());
-    res.resize(x.getDimensions());
+    x_old_obj.resize(x_obj.getDimensions());
+    res_obj.resize(x_obj.getDimensions());
 
     residual_norm = 10. * tolerance;
 
-    copyVector(x, x_old);
+    // Define raw pointer that will be used in the target region
+    double *x = x_obj.getData();
+    double *x_old = x_old_obj.getData();
+    double *b = b_obj.getData();
+    double *res = res_obj.getData();
+    double *A = A_obj.getData();
+    int num_rows = A_obj.numRows();
+    int num_cols = A_obj.numCols();
+    int num_elts_A = num_rows * num_cols;
+    int num_loc_elts_x = x_obj.numRows();
 
+    copyVector(x, x_old, num_rows);
+    
     /* Start the main loop */
 #ifdef USE_MPI
     /*
@@ -118,34 +137,48 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
      */
     // NOT_IMPLEMENTED
 #endif
+
+#pragma omp target data map(to: A[0:num_elts_A], b[0:num_loc_elts_x], res[0:num_loc_elts_x]) \
+                        map(tofrom: x[0:num_loc_elts_x], x_old[0:num_loc_elts_x])
+{
+#pragma omp target map(from: norm_b)
+    norm_b = calculateNorm(b, num_loc_elts_x);
+
     while ( (iter < max_iter) && (residual_norm > tolerance) ) {
-        
-#pragma omp parallel for
-        for(int i = A.numRows() - 1; i >= 0; i--) {
+
+#pragma omp target teams
+#pragma omp distribute parallel for
+        for(int i = num_rows - 1; i >= 0; i--) {
             double diag = 1.;          // Diagonal element
             double sigma = 0.0;        // Just a temporary value
 
-            x(i) = b(i);
-
+            x[i] = b[i];
+          
 #pragma omp simd reduction(+ : sigma)
-            for(int j = 0; j < A.numCols(); ++j) {
-                sigma += A(i, j) * x_old(j);
+            for(int j = 0; j < num_cols; ++j) {
+                sigma += A[j + i * num_cols] * x_old[j];
             }
-            diag = A(i, i);
-            sigma -= diag * x_old(i);
-            x(i) = (x(i) - sigma) * omega / diag;
-        }
-        
-        x.exchangeRealHalo();
-        
-#pragma omp parallel for simd 
-        for(int i = 0; i < x.numRows(); ++i) {
-            x(i) += (1 - omega) * x_old(i);
-            x_old(i) = x(i);
+            diag = A[i + i * num_cols];
+            sigma -= diag * x_old[i];
+            x[i] = (x[i] - sigma) * omega / diag;
         }
 
-        calculateResidual(A, x, b, res);
-        residual_norm = calculateNorm(res) / norm_b;
+        // x.exchangeRealHalo();
+
+#pragma omp target teams
+#pragma omp distribute parallel for simd
+        for(int i = 0; i < num_loc_elts_x; ++i) {
+            x[i] += (1 - omega) * x_old[i];
+            x_old[i] = x[i];
+        }
+
+#pragma omp target teams
+        calculateResidual(A, x, b, res, num_cols, num_rows);
+
+#pragma omp target map(tofrom:residual_norm)
+        residual_norm = calculateNorm(res, num_loc_elts_x);
+
+        residual_norm = residual_norm / norm_b;
 
         if (my_rank == 0)
             cout << iter << '\t' << residual_norm << endl;
@@ -153,3 +186,9 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
         ++iter;
     }
 }
+
+// Download the solution back from the device
+#pragma omp target update from(x[0:num_loc_elts_x])
+
+}
+#endif
