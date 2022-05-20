@@ -1,9 +1,11 @@
 #!/bin/bash
 
-compiler='icpc'
+compiler="icpc"
 extra_flags=(-std=c++1y)
 
-# Check version of the loaded MPI library
+# ####################################### #
+# Check version of the loaded MPI library #
+# ####################################### #
 function _check_mpi_version() {
     local mpi_compiler=""
     local mpi_type=""
@@ -41,17 +43,34 @@ function _check_mpi_version() {
 
     if [[ $mpi_type == "OpenMPI" ]] || [[ $mpi_type == "MPICH" ]]
     then 
-        mpi_compiler='mpicxx'
+        mpi_compiler="mpicxx"
     else 
-        mpi_compiler='mpiicpc'
+        mpi_compiler="mpiicpc"
     fi
 
     echo "$mpi_compiler"
 }
 
+# ####################################### #
+#     Check name of the C++ compiler      #
+# ####################################### #
+function _check_cpp_compiler() {
+    local cpp_compiler=""
+    if ( ! command -v icpc &> /dev/null )
+    then
+        echo "Using GNU compiler..." >&2
+        cpp_compiler="g++"
+    else
+        echo "Using Intel compiler..." >&2
+        cpp_compiler="icpc"
+    fi
 
+    echo "$cpp_compiler"
+}
 
-# Analyze input parameters
+# ####################################### #
+#        Analyze input parameters         #
+# ####################################### #
 if [ $# -eq 0 ]
 then
     echo "The compilation type in not specified. Please, use 'omp', 'mpi', 'hybrid', or 'gpu' " >&2
@@ -64,8 +83,14 @@ then
     extra_flags=(-DUSE_MPI -lmpi)
 elif [ $1 = "omp" ]
 then
-    echo "Compiling with 'icpc'..." >&2
-    extra_flags=(-qopenmp)
+    read compiler < <( _check_cpp_compiler ) || exit 1
+    echo "Compiling with '$compiler'..." >&2
+    if [[ $compiler ==  "icpc" ]]
+    then
+        extra_flags+=(-qopenmp)
+    else
+        extra_flags+=(-fopenmp)
+    fi
 elif [ $1 = "hybrid" ]
 then
     read compiler < <( _check_mpi_version ) || exit 1
@@ -92,12 +117,16 @@ then
     if [ $2 = "test" ]
     then
         echo "Compiling for testing..." >&2
-        extra_flags+='-DTEST '
+        extra_flags+=(-DTEST)
     else
         echo "Error: Incorrect second argument." >&2
+        exit 1
     fi
 fi
 
+# ####################################### #
+#            Compile th ecode             #
+# ####################################### #
 $compiler \
     "${extra_flags[@]}" \
     -g3 -O3 -march=znver2 --std=c++11 \
