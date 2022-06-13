@@ -87,7 +87,7 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
 #ifdef USE_MPI
     /*
      * Note, that the data should be exchanged between the real and halo cells.
-     * Place the call for `x.exchangeRealHalo();` at the right place in the
+     * Put the call for `x.exchangeRealHalo();` in the right place in the
      * iterative loop.
      */
     NOT_IMPLEMENTED
