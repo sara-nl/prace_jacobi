@@ -125,11 +125,11 @@ then
 fi
 
 # ####################################### #
-#            Compile th ecode             #
+#            Compile the code             #
 # ####################################### #
 $compiler \
     "${extra_flags[@]}" \
-    -g3 -O3 -march=znver2 --std=c++11 \
+    -g -O3 --std=c++11 \
     IO/io.cpp \
     General/helpers.cpp \
     Solver/solver.cpp \
