@@ -135,10 +135,10 @@ void Vector::exchangeRealHalo() {
     /* ****************************************************************************************** */
     // Assemble send buffers to west
     if (ngb_pid.west != EMPTY) {
-            for(int n = 0; n < halo_chunk_size.west; ++n) {
-                snd_buf_we[n] = data[on_boarder_ids.west[n]];
-            }
-            MPI_Send(snd_buf_we.data(), snd_buf_we.size(), MPI_DOUBLE, ngb_pid.west, tag_we, MPI_COMM_WORLD);
+          for(int n = 0; n < halo_chunk_size.west; ++n) {
+              snd_buf_we[n] = data[on_boarder_ids.west[n]];
+          }
+          MPI_Send(snd_buf_we.data(), snd_buf_we.size(), MPI_DOUBLE, ngb_pid.west, tag_we, MPI_COMM_WORLD);
     }
 
     // Assemble send buffers to south
@@ -170,10 +170,10 @@ void Vector::exchangeRealHalo() {
     /* ****************************************************************************************** */
     // Assemble send buffers to east
     if (ngb_pid.east != EMPTY) {
-            for(int n = 0; n < halo_chunk_size.east; ++n) {
-                snd_buf_we[n] = data[on_boarder_ids.east[n]];
-            }
-            MPI_Send(snd_buf_we.data(), snd_buf_we.size(), MPI_DOUBLE, ngb_pid.east, tag_we, MPI_COMM_WORLD);
+          for(int n = 0; n < halo_chunk_size.east; ++n) {
+              snd_buf_we[n] = data[on_boarder_ids.east[n]];
+          }
+          MPI_Send(snd_buf_we.data(), snd_buf_we.size(), MPI_DOUBLE, ngb_pid.east, tag_we, MPI_COMM_WORLD);
     }
 
     // Assemble send buffers to north
