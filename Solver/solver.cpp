@@ -35,8 +35,8 @@ void Solver::copyVector(Vector &vec_in, Vector &vec_out) {
      */
     // NOT_IMPLEMENTED
 #pragma omp parallel for simd
-    for(int i = 0; i < vec_in.numRows(); ++i) {
-        vec_out(i) = vec_in(i);
+    for(int n = 0; n < vec_in.numRows(); ++n) {
+        vec_out(n) = vec_in(n);
     }    
 }
 
@@ -79,8 +79,8 @@ double Solver::calculateNorm(Vector &vec) {
     double sum = 0.0;
 
 #pragma omp parallel for simd reduction(+ : sum)
-    for(int i = 0; i < vec.getLocElts(); ++i) {
-        sum += vec(i) * vec(i);
+    for(int n = 0; n < vec.getLocElts(); ++n) {
+        sum += vec(n) * vec(n);
     }
 
     findGlobalSum(sum);
@@ -113,7 +113,7 @@ void Solver::solveJacobi(Matrix &A, Vector &x, Vector &b) {
 #ifdef USE_MPI
     /*
      * Note, that the data should be exchanged between the real and halo cells.
-     * Place the call for `x.exchangeRealHalo();` at the right place in the
+     * Put the call for `x.exchangeRealHalo();` in the right place in the
      * iterative loop.
      */
     // NOT_IMPLEMENTED

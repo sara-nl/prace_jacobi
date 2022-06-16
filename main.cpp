@@ -41,9 +41,34 @@
  * @param message Message to be added to the report
  */
 void reportElapsedTime(double start, double end, const string &message) {
-    findGlobalMin(start);
-    findGlobalMax(end);
-    printByRoot("Elapsed time (" + message + "): " + std::to_string(end - start) + "s.");
+
+    double elp_time = end - start;
+    double elp_time_min = elp_time;
+    double elp_time_max = elp_time;
+
+    findGlobalMin(elp_time_min);
+    findGlobalMax(elp_time_max);
+    findGlobalSum(elp_time);
+
+    printByRoot("Elapsed time (" + message + "): ");
+    printByRoot("  Min: " + std::to_string(elp_time_min) + "s.");
+    printByRoot("  Max: " + std::to_string(elp_time_max) + "s.");
+    printByRoot("  Avg: " + std::to_string(elp_time / getNumProcs()) + "s.");
+}
+
+void checkIfClockSynced() {
+
+#ifdef USE_MPI
+    int flag = 0;
+    int *value_ptr;
+
+    MPI_Comm_get_attr(MPI_COMM_WORLD, 
+                     MPI_WTIME_IS_GLOBAL, 
+                     &value_ptr, 
+                     &flag);
+
+    printByRoot("MPI_WTIME_IS_GLOBAL: " + std::to_string(*value_ptr));
+#endif
 }
 
 /*!
@@ -129,6 +154,8 @@ int main(int argc, char** argv) {
     runProblem(argc, argv);
 #endif
 
+    checkIfClockSynced();
+    
     /* 
      * Finalize the scope of MPI calls
      */

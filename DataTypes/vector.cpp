@@ -170,9 +170,6 @@ void Vector::exchangeRealHalo() {
     // no need to communicate in a non-MPI code
     return;
 #else
-
-    int my_rank = getMyRank();
-    int num_procs = getNumProcs();
     vector<double> snd_buf_w, rcv_buf_w;                      // Send/receive buffers for the west neighbors
     vector<double> snd_buf_e, rcv_buf_e;                      // Send/receive buffers for the east neighbors
     vector<double> snd_buf_s, rcv_buf_s;                      // Send/receive buffers for the south neighbors
