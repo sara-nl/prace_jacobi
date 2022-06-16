@@ -1,8 +1,7 @@
 #!/bin/bash
 
 compiler="icpc"
-extra_flags=(-std=c++1y)
-
+extra_flags=(-std=c++11)
 
 # ####################################### #
 # Check version of the loaded MPI library #
@@ -52,7 +51,6 @@ function _check_mpi_version() {
     echo "$mpi_compiler"
 }
 
-
 # ####################################### #
 #     Check name of the C++ compiler      #
 # ####################################### #
@@ -69,7 +67,6 @@ function _check_cpp_compiler() {
 
     echo "$cpp_compiler"
 }
-
 
 # ####################################### #
 #        Analyze input parameters         #
@@ -127,13 +124,12 @@ then
     fi
 fi
 
-
 # ####################################### #
 #            Compile the code             #
 # ####################################### #
 $compiler \
     "${extra_flags[@]}" \
-    -g -O2 \
+    -g -O3 \
     IO/io.cpp \
     General/helpers.cpp \
     Solver/solver.cpp \
