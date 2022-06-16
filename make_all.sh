@@ -107,7 +107,8 @@ then
     fi
 elif [ $1 = "gpu" ]
 then
-    echo "Compiling with 'g++' and support for the OpenMP offloading..." >&2
+    read compiler < <( _check_cpp_compiler ) || exit 1
+    echo "Compiling with $compiler' and support for the OpenMP offloading..." >&2
     extra_flags=(-fopenmp -foffload=nvptx-none='-misa=sm_35 -Ofast -lm')
 else
     echo "Error: Incorrect compilation type is specified. Please, use 'omp', 'mpi' or 'hybrid' " >&2
