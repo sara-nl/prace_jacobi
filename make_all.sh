@@ -13,8 +13,8 @@ function _check_mpi_version() {
     if ( ! command -v mpirun &> /dev/null )
     then
         echo "Error: The MPI library is not loaded (Abort)..." >&2
-        echo "       Use 'module load 2021' to load the software environment" >&2
-        echo "       and 'module av MPI' to see available MPI libraries." >&2
+        echo "       Use 'module load 2023' to load the software environment" >&2
+        echo "       and 'module av mpi/' to see available MPI libraries." >&2
         exit 1
     else
         mpi_type="$(mpirun --version | grep Open)"
