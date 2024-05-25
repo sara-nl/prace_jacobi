@@ -211,7 +211,7 @@ void IO::writeByAll(MPI_File &mpi_file, Dimensions &dims, Field &T) {
     displacements[0] = MPI_Aint_diff(displacements[0], base_address);
     displacements[1] = MPI_Aint_diff(displacements[1], base_address);
 
-    /* Create a new type of structure and commit it */
+    /* Create a new type of structure and commit it. Use MPI_Type_create_struct() and MPI_Type_commit() */
     NOT_IMPLEMENTED
 
     /* Prepare subarray type */
