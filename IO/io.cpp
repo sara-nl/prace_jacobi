@@ -223,7 +223,7 @@ void IO::writeByAll(MPI_File &mpi_file, Dimensions &dims, Field &T) {
     /* Based on the created type of structure, create a subarray and commit it */
     NOT_IMPLEMENTED
 
-    /* Set vile view and write data */
+    /* Set the file view and write data */
     MPI_Status status;
     /* Set the file view using the created types of structure and subarray */
     NOT_IMPLEMENTED
